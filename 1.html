@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>同台换乘 · 第一章</title>
+<style>
+:root{
+  --bg:#0f1218; --panel:#171b24; --line:#252b38;
+  --text:#dfe4ee; --muted:#8a93a6;
+  --accent:#f7a03c; --ok:#3ddc97; --bad:#ff6b6b;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;margin:0;}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  font-size:16px;line-height:1.85;overflow:hidden;
+}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;}
+.hidden{display:none!important;}
+
+/* ============ 封面 ============ */
+#cover{
+  justify-content:center;align-items:center;text-align:center;padding:24px;
+  background:radial-gradient(circle at 50% 18%,#1b2434 0%,#0f1218 62%);
+  overflow:hidden;
+}
+.deco{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  opacity:.15;pointer-events:none;}
+.deco span{width:2px;height:58%;background:var(--c);margin:0 34px;border-radius:2px;}
+.deco span:nth-child(2){height:38%;}
+.deco span:nth-child(3){height:74%;}
+.deco span:nth-child(4){height:32%;}
+.cover-inner{position:relative;z-index:2;max-width:560px;}
+.badge{
+  display:inline-block;font-size:11.5px;letter-spacing:2px;color:#9aa6bd;
+  border:1px solid #2b3446;border-radius:999px;padding:5px 14px;margin-bottom:26px;
+}
+#cover h1{
+  margin:0;font-size:clamp(42px,11vw,64px);letter-spacing:8px;font-weight:800;
+  background:linear-gradient(135deg,#ffd08a,#f7941d 45%,#f5613c);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 0 60px rgba(247,148,29,.18);
+}
+.chapter-no{margin-top:18px;font-size:12px;letter-spacing:6px;color:#6c7891;}
+.chapter-name{margin-top:10px;font-size:16.5px;color:#c6cede;line-height:1.7;
+  font-style:italic;}
+#startBtn{
+  margin-top:44px;padding:15px 54px;border-radius:999px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,#f7a03c,#f5613c);color:#1a1208;
+  font-size:16px;font-weight:800;letter-spacing:3px;font-family:inherit;
+  box-shadow:0 10px 34px rgba(247,120,40,.34);
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+#startBtn:active{transform:scale(.95);box-shadow:0 4px 16px rgba(247,120,40,.3);}
+.cover-tip{margin-top:26px;font-size:12px;color:#5b6478;letter-spacing:1px;line-height:1.9;}
+
+/* ============ 阅读区 ============ */
+.topbar{position:absolute;top:0;left:0;right:0;height:3px;background:#1a2030;z-index:10;}
+#progressFill{height:100%;width:0;background:linear-gradient(90deg,#f7941d,#f5c518);
+  transition:width .35s ease;}
+#content{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:48px max(20px,calc((100vw - 680px)/2)) 150px;
+}
+.line{margin:0 0 18px;opacity:0;transform:translateY(12px);
+  transition:opacity .45s ease,transform .45s ease;}
+.line.show{opacity:1;transform:none;}
+
+.line.scene{
+  color:var(--muted);font-style:italic;font-size:14.5px;line-height:1.95;
+  border-left:2px solid #2e3647;padding-left:14px;margin-bottom:22px;
+}
+.line.say{font-size:16.5px;line-height:1.95;}
+.line.say .who{font-weight:800;letter-spacing:.5px;}
+.line.say .colon{color:#5b6478;margin:0 1px;}
+.line.say .txt{color:#e3e8f2;}
+
+.line.msg{
+  background:#1a2130;border:1px solid #273246;border-radius:14px;
+  padding:12px 16px;margin-left:36px;margin-right:4px;
+}
+.line.msg .who{font-size:13px;opacity:.85;}
+.line.msg .txt{font-size:15.5px;}
+
+#hint{
+  position:absolute;bottom:0;left:0;right:0;padding:16px 0 24px;text-align:center;
+  color:#5b6478;font-size:12.5px;letter-spacing:3px;pointer-events:none;
+  background:linear-gradient(to top,var(--bg) 58%,transparent);
+  animation:breathe 2.1s ease-in-out infinite;
+}
+#hint .arrow{display:inline-block;animation:drop 1.4s ease-in-out infinite;}
+@keyframes breathe{0%,100%{opacity:.4}50%{opacity:.95}}
+@keyframes drop{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+
+.end-mark{margin:52px 0 20px;text-align:center;opacity:0;transition:opacity .8s ease;}
+.end-mark.show{opacity:1;}
+.end-line{width:52px;height:2px;margin:0 auto 22px;
+  background:linear-gradient(90deg,transparent,#f7941d,transparent);}
+.end-mark>div:nth-child(2){font-size:14px;letter-spacing:8px;color:#f7a03c;font-weight:700;}
+.end-tip{margin-top:14px;font-size:12.5px;color:#5b6478;letter-spacing:1px;}
+
+/* ============ 试题弹窗 ============ */
+#quizMask{
+  position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;
+  padding:16px;background:rgba(6,8,12,.84);backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+  opacity:0;pointer-events:none;transition:opacity .3s ease;
+}
+#quizMask.on{opacity:1;pointer-events:auto;}
+.quiz-card{
+  width:100%;max-width:560px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  background:linear-gradient(180deg,#1b2231,#141922);
+  border:1px solid #2b3446;border-radius:20px;padding:24px 22px 22px;
+  box-shadow:0 30px 80px rgba(0,0,0,.65);
+  transform:translateY(24px) scale(.96);
+  transition:transform .38s cubic-bezier(.2,.9,.3,1.15);
+}
+#quizMask.on .quiz-card{transform:none;}
+.q-tag{
+  display:inline-block;font-size:11.5px;letter-spacing:2px;color:#f7a03c;
+  border:1px solid rgba(247,160,60,.42);background:rgba(247,160,60,.07);
+  padding:4px 12px;border-radius:999px;margin-bottom:16px;
+}
+.q-stem{
+  font-size:15.5px;line-height:1.95;color:#e8edf6;margin-bottom:18px;
+  white-space:pre-wrap;
+}
+.q-opts{margin-bottom:4px;}
+.opt{
+  display:block;width:100%;text-align:left;margin-bottom:10px;cursor:pointer;
+  padding:12px 16px;border-radius:12px;border:1px solid #2b3446;
+  background:#1b2230;color:#cbd3e2;font-size:14.8px;line-height:1.65;
+  font-family:inherit;transition:all .18s ease;
+}
+.opt:active{transform:scale(.99);}
+.opt.sel{border-color:var(--accent);background:rgba(247,160,60,.13);color:#ffd8a3;}
+.opt.right{border-color:var(--ok);background:rgba(61,220,151,.14);color:#a8f5d3;}
+.opt.wrong{border-color:var(--bad);background:rgba(255,107,107,.13);color:#ffbcbc;}
+.q-feedback{display:none;margin-top:16px;font-size:14.2px;line-height:1.9;color:#b9c3d6;
+  border-left:2px solid #2e3647;padding-left:14px;}
+.q-feedback.show{display:block;animation:fadeIn .35s ease;}
+.q-feedback .ok{color:var(--ok);}
+.q-feedback .bad{color:var(--bad);}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.q-submit{
+  width:100%;margin-top:18px;padding:14px;border-radius:12px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,#f7a03c,#f5613c);color:#1a1208;
+  font-size:15.5px;font-weight:800;letter-spacing:2px;font-family:inherit;
+  transition:transform .15s ease,opacity .2s ease;
+}
+.q-submit:active{transform:scale(.98);}
+.q-submit:disabled{opacity:.32;cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<section id="cover" class="screen">
+  <div class="deco">
+    <span style="--c:#2d7ff9"></span>
+    <span style="--c:#f7941d"></span>
+    <span style="--c:#f5c518"></span>
+    <span style="--c:#e8453c"></span>
+  </div>
+  <div class="cover-inner">
+    <div class="badge">广州地铁 · 九个高中 · 一个不存在的站</div>
+    <h1>同台换乘</h1>
+    <div class="chapter-no">第 一 章</div>
+    <div class="chapter-name">体育西路：我撞见我0在啃我1的脖子</div>
+    <button id="startBtn">进 入 阅 读</button>
+    <div class="cover-tip">点击屏幕，一句一句往下读<br>遇到地理题请作答 · 答错可以重选</div>
+  </div>
+</section>
+
+<section id="reader" class="screen hidden">
+  <div class="topbar"><div id="progressFill"></div></div>
+  <main id="content"></main>
+  <div id="hint">点击继续 <span class="arrow">▼</span></div>
+</section>
+
+<div id="quizMask"><div class="quiz-card"></div></div>
+<script src="characters.js"></script>
+<script>
+/* ==================== 人物配色 ==================== */
+  const C = Object.fromEntries(
+    Object.entries(window.CHARACTERS).map(([k, v]) => [k, v.color || v])
+  );
+
+/* ==================== 剧本数据 ==================== */
+const STORY = [
+
+/* ---------- 体育西路 ---------- */
+{t:'scene',s:'体育西路站，晚高峰。三号线站台是广州地铁的终极Boss，日均客流把"地狱西"三个字刻进了每一块被踩出包浆的地砖里。车厢门一开，人流像开闸的洪水灌满岛式站台，空调冷气被人体的热浪顶到天花板，头顶导向灯箱蒙着一层水雾，光晕散开，照得每个人脸上都糊着一层黏腻的疲惫。'},
+{t:'scene',s:'二中被人流从车厢里推出来，书包带子挤歪到胳膊肘，白色校服短袖后背洇出一片汗。他低头给六中发语音。'},
+{t:'say',n:'二中',s:'你在哪个口？我快被挤成地铁卡了。'},
+{t:'say',n:'六中',s:'站台中段，奶茶店旁边。我看见你了。'},
+{t:'scene',s:'二中抬起头。隔着七八个人的肩膀，六中站在站台中段一根立柱旁边，手里举着两杯奶茶，杯壁上凝着水珠。六中今天没穿校服，一件黑色宽松T恤，领口洗得有点大，锁骨露出一小截。二中朝他走过去，刚迈出两步，余光扫到旁边一根柱子后面——两个人在接吻。'},
+{t:'scene',s:'高个子把矮个子按在屏蔽门旁边的玻璃墙上。右手撑在矮个子耳侧，五指张开按着玻璃，左手扣着后颈。矮个子仰着脸，后脑勺贴着玻璃，被亲得嘴唇微张，虎牙露了个尖，眼睛半阖。他的手搭在高个子腰上，指尖轻轻敲了两下，然后顺着侧腰往上滑，隔着衣服捏了一把。高个子喉咙里滚出一声很低的气音，亲得更重，矮个子的后脑勺磕在玻璃上"唔"了一声。高个子立刻把手收回来垫在他脑后，掌根贴玻璃，手指插进头发里，动作没停。'},
+{t:'scene',s:'二中认出了侧脸。华附。省实。手机从手里滑出去，啪地摔在地砖上，屏幕朝下，碎成蛛网。'},
+{t:'scene',s:'六中举着奶茶跑过来，顺着二中的视线看了一眼，脚步慢下来。'},
+{t:'say',n:'六中',s:'（盯着柱子后面看了五秒，低头看二中）你手机掉了。'},
+{t:'say',n:'二中',s:'（蹲下去捡）嗯。'},
+{t:'say',n:'六中',s:'（把奶茶递过去）你的。买一送一。'},
+{t:'say',n:'二中',s:'（接过，手有点抖）谢谢。'},
+{t:'say',n:'六中',s:'（又看了一眼柱子后面，小声）你眼睛怎么红了。'},
+{t:'say',n:'二中',s:'进沙子了。'},
+{t:'say',n:'六中',s:'地铁站哪来的沙子。'},
+{t:'say',n:'二中',s:'体育西路。人多。扬尘。施工。什么都有。'},
+{t:'say',n:'六中',s:'（张了张嘴）……行吧。'},
+{t:'scene',s:'柱子后面两个人分开了。华附拇指蹭了一下省实被亲得泛红的下唇，低头在耳边说了句什么。省实笑了一下，把华附的衣领拽正，偏过头，余光扫到站台上蹲着的二中。'},
+{t:'say',n:'省实',s:'（走过来）二中？你手机摔了？'},
+{t:'say',n:'二中',s:'（站起来，碎屏攥在手里，裂纹硌着掌心）没事。'},
+{t:'say',n:'省实',s:'你奶茶不喝吗？六中排了二十分钟队。'},
+{t:'say',n:'二中',s:'给你喝。'},
+{t:'say',n:'省实',s:'啊？'},
+{t:'say',n:'二中',s:'我说给你喝。我先走了。'},
+{t:'scene',s:'二中转身往扶梯走，书包带子还歪着，脚步快得像逃命。六中看了看省实，又看了看柱子后面慢悠悠走过来的华附。'},
+{t:'say',n:'六中',s:'（把另一杯往省实手里一塞，压低声音）注意点影响。站台有监控。'},
+{t:'scene',s:'六中追二中去了。省实低头看手里的奶茶，标签上写着"二中 三分糖 去冰"。'},
+{t:'say',n:'华附',s:'（走过来，手插口袋，低头看那杯奶茶）二中给的？'},
+{t:'say',n:'省实',s:'他塞给我的。'},
+{t:'say',n:'华附',s:'（抽走看了一眼标签）三分糖。他知道你喝三分糖。'},
+{t:'say',n:'省实',s:'高一开学第一个月坐我旁边的就是他。你忘了？'},
+{t:'say',n:'华附',s:'（把奶茶塞回他手里）以后少跟他单独待着。'},
+{t:'say',n:'省实',s:'你管我？'},
+{t:'say',n:'华附',s:'（低头，眼神沉下来）嗯。管你。'},
+{t:'say',n:'省实',s:'（仰脸笑，虎牙又露出来）那你今晚别走了。住我酒店。'},
+{t:'say',n:'华附',s:'（愣了一秒）……你确定？'},
+{t:'say',n:'省实',s:'（转身往扶梯走，吸管咬在嘴里，头也不回）你爱来不来。'},
+
+/* ---------- 酒店 ---------- */
+{t:'scene',s:'晚上九点四十，酒店房间。省实刷卡进门，书包往地上一扔，整个人扑到床上脸埋进枕头。华附跟进来，把门带上，站在床边看了他一会儿。'},
+{t:'say',n:'华附',s:'你刚才在站台上是不是故意的。'},
+{t:'say',n:'省实',s:'（闷在枕头里）什么故意的。'},
+{t:'say',n:'华附',s:'二中看过来的时候，你故意仰头。你平时亲的时候不爱仰脖子。'},
+{t:'say',n:'省实',s:'（翻了个身，仰面躺着，一只手搭在额头上，看着天花板）华附，你观察得也太细了。'},
+{t:'say',n:'华附',s:'（单膝跪上床沿，俯身下来，把他搭在额头的手拿下来按在旁边）你是不是想让二中看见。'},
+{t:'say',n:'省实',s:'（眼睛偏到一边）……没有。'},
+{t:'say',n:'华附',s:'省实。'},
+{t:'say',n:'省实',s:'（把脸转回来）干嘛。'},
+{t:'say',n:'华附',s:'你知不知道二中喜欢你。'},
+{t:'scene',s:'省实沉默了三秒。空调出风口的嗡嗡声填满房间。'},
+{t:'say',n:'省实',s:'知道。'},
+{t:'say',n:'华附',s:'那你还故意让他看见？'},
+{t:'say',n:'省实',s:'（把被按着的手抽出来，推了一下华附胸口，没推动）我就是……想让他死心。他老给我送东西，老找借口跟我待着。我不知道怎么拒绝。你让我怎么办，跟他说"二中你别喜欢我了"？我说不出口。'},
+{t:'scene',s:'华附盯着他看了很久。省实被他看得偏过头去。'},
+{t:'say',n:'华附',s:'（低下头，额头抵着省实的额头，鼻尖蹭了一下）省实。你以后再不知道怎么办，先跟我说。'},
+{t:'say',n:'省实',s:'（小声）跟你说有什么用。你除了吃醋还会干嘛。'},
+{t:'say',n:'华附',s:'（低笑了一声，呼吸打在省实嘴唇上）还会亲你。'},
+{t:'scene',s:'他亲了一下。嘴唇刚碰到就分开。'},
+{t:'say',n:'省实',s:'（睁大眼睛）就这？'},
+{t:'say',n:'华附',s:'（又亲一下，还是轻的）嗯。就这。'},
+{t:'say',n:'省实',s:'（仰头追上去）华附你是不是不行。'},
+{t:'scene',s:'华附眼神暗下来。他起身，往后退了一步。省实愣住。'},
+{t:'say',n:'省实',s:'你干嘛？'},
+{t:'say',n:'华附',s:'（握住省实搭在床边的脚踝，往自己这边拖了一下）你刚才说什么。再说一遍。'},
+{t:'say',n:'省实',s:'（被拖得往下滑了一截，后脑勺从枕头滑到床垫，仰着脸看他）我说你——'},
+{t:'scene',s:'华附松开脚踝，走到门口，拉开门，跨出去，把门从外面带上。咔哒。锁死。整套动作不到五秒。'},
+{t:'scene',s:'省实躺在床上愣了三秒。'},
+{t:'say',n:'省实',s:'（猛地坐起来）华附？！'},
+{t:'say',n:'华附',s:'（门外，声音闷闷的但听得出来在笑）你让我冷静一下。冷静好了再开门。'},
+{t:'say',n:'省实',s:'（蹦下床冲到门口拍门）华附你是不是有病！这是我的房间！我的卡！你拿我的卡锁我的门？！'},
+{t:'say',n:'华附',s:'（靠在门外墙上）卡在我这。你从里面反锁不了。认输就开门。'},
+{t:'say',n:'省实',s:'华附你开门！我衣服都没换！'},
+{t:'say',n:'华附',s:'你换。门关着，我看不见。'},
+{t:'say',n:'省实',s:'（气得笑出来）我操。华附你等着。'},
+{t:'scene',s:'他掏出手机发消息："你最好这辈子别开门。"华附秒回："你最好先想想你今晚睡哪。走廊有监控。"省实把手机往床上一摔，坐在床边生闷气。三分钟后站起来，走到门边蹲下去，从门缝往外看。走廊灯亮着，华附的鞋尖露在门缝外面，白色板鞋，鞋带系得整整齐齐。'},
+{t:'say',n:'省实',s:'（冲着门缝喊）华附。'},
+{t:'say',n:'华附',s:'嗯。'},
+{t:'say',n:'省实',s:'你站多久了。'},
+{t:'say',n:'华附',s:'三分钟。'},
+{t:'say',n:'省实',s:'累不累。'},
+{t:'say',n:'华附',s:'还好。'},
+{t:'say',n:'省实',s:'（额头抵在门板上，声音低下来）华附。我刚才是说，你是不是不行。'},
+{t:'scene',s:'门外安静两秒。'},
+{t:'say',n:'华附',s:'省实，你再说一遍。'},
+{t:'say',n:'省实',s:'（对着门缝，一字一字）我说，你是不是不行。亲两下就跑了。'},
+{t:'scene',s:'门外手搭上门把手的声音。华附的声音低了一个调。'},
+{t:'say',n:'华附',s:'省实。你最好想清楚再激我。'},
+{t:'say',n:'省实',s:'（蹲在门里面笑）我想得很清楚。华附你开门。今晚你要是忍得住，我就——我就一个星期不撩你。'},
+{t:'scene',s:'门锁咔哒一声开了。华附站在门口，走廊灯从背后打过来，侧脸勾出一道明暗分界线。省实蹲在地上仰着脸看他，虎牙咬着下唇，眼睛里全是得逞的笑。'},
+{t:'say',n:'华附',s:'（蹲下去，跟他平视）一个星期不撩我？'},
+{t:'say',n:'省实',s:'（点头）嗯。你做得到吗。'},
+{t:'say',n:'华附',s:'（捏住省实下巴，拇指蹭了一下嘴角）省实。你刚才说二中找借口跟你待着，你不知道怎么拒绝。那我现在教你——（松开手，站起来退后一步，语气平淡）省实，我不喜欢你。你别来找我了。'},
+{t:'scene',s:'省实蹲在地上愣住了。'},
+{t:'say',n:'省实',s:'（站起来）华附你干嘛。'},
+{t:'say',n:'华附',s:'教你拒绝人。学会了没有。'},
+{t:'say',n:'省实',s:'（愣了三秒，忽然笑了）华附。你说这句话的时候，眼睛在看走廊消防栓。'},
+{t:'say',n:'华附',s:'……'},
+{t:'say',n:'省实',s:'（往前走两步，拽住华附衣摆）你自己都说不出口，还教我。'},
+{t:'scene',s:'华附低头看他。省实拽着衣摆的手往上挪，够到外套拉链，食指拇指捏着拉链头，慢慢往下拉了半截。'},
+{t:'say',n:'省实',s:'（声音很轻）华附。我不喜欢你这句话，你说不出口。我也说不出口。所以我只能躲。躲不掉就让你帮我挡。你懂不懂。'},
+{t:'scene',s:'华附握住他拉链头上的手，拿开，把他整个人拉进怀里，手臂收紧。省实脸埋在他胸口，闷闷地笑了一声。'},
+{t:'say',n:'省实',s:'你这个人真的很麻烦。吃醋也不说，生气也不说，锁门倒是挺利索。'},
+{t:'say',n:'华附',s:'（下巴抵在他头顶）你话太多了。'},
+{t:'say',n:'省实',s:'（仰起头，下巴磕在他胸口）那你堵我嘴啊。'},
+{t:'scene',s:'华附低头咬了他嘴唇一下，不轻不重，咬完舔了一下。'},
+{t:'say',n:'华附',s:'堵了。满意了？'},
+{t:'say',n:'省实',s:'（舔了一下被咬的地方）还行。七分。'},
+{t:'say',n:'华附',s:'扣三分？'},
+{t:'say',n:'省实',s:'扣三分因为你锁我门。我脚都蹲麻了。'},
+{t:'scene',s:'华附把他打横抱起来放到床上，蹲下去脱鞋，把他小腿搭在自己膝盖上，手心搓小腿肚。'},
+{t:'say',n:'华附',s:'麻哪了。'},
+{t:'say',n:'省实',s:'（缩了一下腿）小腿。你轻点。'},
+{t:'scene',s:'华附放轻力道。省实忽然偏过头，看床头柜上自己的手机，屏幕亮了一下。他伸手够过来，低头看了一眼，表情微妙地停住了。'},
+{t:'say',n:'华附',s:'怎么了。'},
+{t:'say',n:'省实',s:'（把手机翻了个面扣在床上）没什么。二中发的。'},
+{t:'say',n:'华附',s:'（手上揉小腿的动作停了）说什么。'},
+{t:'say',n:'省实',s:'……你自己看。'},
+{t:'scene',s:'他把手机递过去。屏幕上是二中发来的一张照片：一张从作业本上撕下来的纸，上面手写着一道题，拍得端端正正。'},
+
+/* ===== 试题 1 ===== */
+{t:'quiz',q:{
+  tag:'地理解密 · 第 1 题　嘉禾望岗站',
+  stem:'嘉禾望岗站是广州地铁二号线与三号线的换乘枢纽，采用双岛四线同层布局。二号线列车在嘉禾望岗站终到后，需经站前折返进入上行站台载客。\n\n从列车运行与站台布局的角度判断，该站内侧轨道的主要功能是：',
+  options:[
+    'A. 供三号线列车越行通过，提高机场北方向通行效率',
+    'B. 供二号线列车折返，并实现同向同台换乘',
+    'C. 作为三号线支线列车的临时停放线，缓解体育西路压力',
+    'D. 预留十四号线接入条件，承担跨线列车调度功能'
+  ],
+  answer:1,
+  hint:'再想想。二号线在嘉禾望岗是终到站——终点站的列车到站后，得去哪儿？',
+  explain:'嘉禾望岗采用双岛四线同层布局，二号线列车在此终到后经站前折返线进入另一侧站台，乘客下车后在同一座岛台上即可换乘三号线机场北方向，属于典型的同向同台换乘设计。内侧轨道承担的是二号线的折返功能，不是越行线，也不是支线停车线；十四号线虽在嘉禾望岗设站，但为后续接入的独立站台层，与本题所问的内侧轨道功能无关。'
+}},
+
+{t:'say',n:'华附',s:'（看完，把手机放到床上）B。'},
+{t:'say',n:'省实',s:'你都不带想的？'},
+{t:'say',n:'华附',s:'嘉禾望岗内侧轨道是二号线折返用的，外侧才是三号线双向。二中拿这道题当敲门砖，意思很明显——他在嘉禾望岗等你。'},
+{t:'say',n:'省实',s:'（靠在床头，把被子拉到下巴）那我去不去。'},
+{t:'say',n:'华附',s:'（站起来，把被子从他下巴底下拽下来）去。我跟你一起去。'},
+{t:'say',n:'省实',s:'你不是让我少跟他单独待着吗。'},
+{t:'say',n:'华附',s:'我说的是"单独"。我在，不算单独。'},
+{t:'say',n:'省实',s:'（笑出声）华附你讲不讲道理。'},
+{t:'say',n:'华附',s:'（关灯，躺到他旁边，隔着被子把人搂住）不讲。睡觉。明天嘉禾望岗。'},
+
+/* ---------- 嘉禾望岗 ---------- */
+{t:'scene',s:'第二天早上，嘉禾望岗站。二号线站台，往广州南站方向的屏蔽门前，二中靠着一根立柱站着，手里攥着一杯没开的豆浆。对面岛台是三号线往机场北方向的候车区，两座岛台同层不互通，中间隔着四条轨道的行车道。头顶广播正在循环："开往广州南站方向的列车即将进站，请乘客按地面标识排队候车。二号线终点站下车后，可在本站同台换乘三号线机场北方向。"'},
+{t:'scene',s:'华附和省实从站厅扶梯下来，一前一后。华附走在前面，省实落后半步，手里还攥着半杯没喝完的豆浆。'},
+{t:'say',n:'二中',s:'（看见两个人并肩走来的那一刻，手里的豆浆杯捏得咔咔响）……省实。'},
+{t:'say',n:'省实',s:'二中。你来得挺早。'},
+{t:'say',n:'二中',s:'嗯。我坐二号线过来的。终点站，清客，所有人在嘉禾望岗下车。（看了一眼华附）你俩倒是来得挺齐。'},
+{t:'say',n:'华附',s:'（站定，手插口袋）题我答了。B。二号线内侧轨道折返，同向同台换乘。你出这道题的时候，把答案写在了"双岛四线"四个字上。二号线终到清客，折返进内侧站台，乘客下车就在同一座岛台上等三号线机场北方向——这是嘉禾望岗设计的核心逻辑。'},
+{t:'say',n:'二中',s:'（把豆浆杯扔进垃圾桶）所以呢。'},
+{t:'say',n:'华附',s:'所以你把这道题发给省实，不是在考地理。你是在告诉他，你在嘉禾望岗等他。二号线终点站，清客，所有人下车。你在这站等一个人，等到了，就是同台换乘。等不到，就是各走各的岛台。'},
+{t:'scene',s:'二中沉默了一会儿。'},
+{t:'say',n:'二中',s:'华附。你地理挺好的。'},
+{t:'say',n:'华附',s:'还行。竞赛保送之前，地理拿过省一。'},
+{t:'say',n:'二中',s:'那体育西路那道题，你要不要也答一下。'},
+{t:'say',n:'省实',s:'（插嘴）什么体育西路题？'},
+{t:'scene',s:'二中从书包侧袋里抽出一张折好的纸，递向省实。华附先一步接过去，展开。'},
+
+/* ===== 试题 2 ===== */
+{t:'quiz',q:{
+  tag:'地理解密 · 第 2 题　体育西路站',
+  stem:'广州地铁体育西路站是一号线与三号线的换乘站，一号线站层为地下二层岛式站台，三号线站层为地下三层岛式站台，两线采用"＋"字型换乘。三号线站层需下穿既有的一号线站层。\n\n从工程地质与施工安全的角度分析，三号线站层采用地下三层而非与一号线同层并行的主要原因是：',
+  options:[
+    'A. 体育西路地处天河商圈核心，地面建筑密集，同层扩建拆迁成本过高',
+    'B. 三号线需下穿珠江，地下三层是跨越江底隧道的最小埋深要求',
+    'C. 一号线站层已建成，三号线须从其下方穿越以避免干扰既有线路运营，同时满足线路纵坡要求',
+    'D. 地下三层可利用花岗岩基岩承载力，避免软土地层沉降'
+  ],
+  answer:2,
+  hint:'再想想。注意题目问的是"工程地质与施工安全"，不是"地面拆迁"。另外——体育西路在珠江底下吗？',
+  explain:'体育西路站一号线为地下二层岛式站台，三号线为地下三层岛式站台，两线呈"＋"字型换乘。三号线站层下穿一号线站层，主要受既有线路结构安全约束——一号线已建成通车，三号线无法与其同层并行扩建，只能从下方穿越，同时满足三号线的线路纵坡与埋深要求。A项拆迁属地面问题，不是同层并行的技术障碍；B项错误，体育西路不在珠江底下，三号线过江段在珠江新城以南；D项错误，体育西路一带为珠江三角洲冲积平原软土地层，并非花岗岩基岩。'
+}},
+
+{t:'say',n:'华附',s:'（看完，把纸折好）C。'},
+{t:'say',n:'二中',s:'（看着华附）你把选项拆得挺干净。'},
+{t:'say',n:'华附',s:'你出题的时候把错误选项设得挺用心的。A写拆迁，B写珠江，D写花岗岩。三个都是广州地理里真实存在的东西，但放在体育西路这道题上全错。你想考的不是记忆，是能不能把"真实存在"和"适用于此题"分开。'},
+{t:'scene',s:'省实靠在旁边的立柱上，豆浆喝完了，空杯捏在手里，看看华附又看看二中。'},
+{t:'say',n:'省实',s:'你俩在这给我上地理课呢。'},
+{t:'say',n:'二中',s:'（转向省实）省实。题你答了没有。'},
+{t:'say',n:'省实',s:'我……还没来得及看。'},
+{t:'say',n:'华附',s:'（把纸递回给省实）答吧。我在旁边听着。'},
+{t:'scene',s:'省实接过纸，低头看了十秒。'},
+{t:'say',n:'省实',s:'C。'},
+{t:'say',n:'二中',s:'理由。'},
+{t:'say',n:'省实',s:'因为一号线先建好了，三号线后来才修。你不能把已经通车的一号线拆了跟三号线并排，只能从底下钻过去。地下三层是被逼出来的，不是一开始就想要三层。而且体育西路那个位置，地面全是楼，天河商圈，你不可能明挖。暗挖下穿是唯一的路。'},
+{t:'say',n:'二中',s:'（看着他，表情松了一点点）行。你还没把高一学的那点东西全忘光。'},
+{t:'say',n:'省实',s:'（把纸塞回他手里）二中。你出这两道题，从体育西路到嘉禾望岗，一路把我往二号线终点站引。你想说什么，直接说。'},
+{t:'scene',s:'二中把纸折好，放回书包侧袋。嘉禾望岗站台上，二号线往广州南站的列车进站广播响起来。内侧岛台屏蔽门上的黄灯闪了两下。'},
+{t:'say',n:'二中',s:'省实。我本来想在这站等你。二号线终点站，所有人都得下车。我想你下车的时候，我在站台上。（看了一眼华附）现在不用了。你俩一起下的车。答案挺清楚的。'},
+{t:'scene',s:'列车停稳，车门打开。二中往后退了一步，没有上车。'},
+{t:'say',n:'二中',s:'我坐下一班。你俩先走。'},
+{t:'say',n:'省实',s:'（站着没动）二中。'},
+{t:'say',n:'二中',s:'干嘛。'},
+{t:'say',n:'省实',s:'白云东平那道题。你塞给我的那张。我还没去找你答。'},
+{t:'say',n:'二中',s:'（愣了一下）……那你去不去。'},
+{t:'say',n:'省实',s:'去。但我有个条件。'},
+{t:'say',n:'二中',s:'什么。'},
+{t:'say',n:'省实',s:'你别老一个人蹲在C口喝豆浆。下次带两杯。六中那杯你自己给他。'},
+{t:'scene',s:'二中站在站台上，看着华附和省实走进开往广州南站方向的车厢。车门关上，列车启动，隧道口吞掉车尾的灯。他低头看了一眼手机，六中的消息躺在对话框里："我在白云东平C口，买了三杯。你一杯，我一杯，省实一杯。华附的我不买。"'},
+{t:'scene',s:'二中回了一个字："买。"'},
+
+/* ---------- 白云东平 ---------- */
+{t:'scene',s:'白云东平站C口，四十分钟后。六中靠在地铁口旁边的便利店冰柜上，手里提着一个塑料袋，里面四杯奶茶。他看见二中从扶梯上来，站直了。'},
+{t:'say',n:'六中',s:'三杯怎么变四杯了。'},
+{t:'say',n:'二中',s:'省实说让你给华附也买一杯。'},
+{t:'say',n:'六中',s:'（把袋子递过去）华附的他自己不会买？'},
+{t:'say',n:'二中',s:'省实说的。'},
+{t:'say',n:'六中',s:'（撇嘴）行吧。'},
+{t:'scene',s:'两个人站在C口。白云大道北的车流从面前过去，东面能看见白云山的一角山脊，灰绿色的轮廓压在楼群后面。二中把奶茶袋放在脚边，从兜里掏出一张新的纸。'},
+{t:'say',n:'二中',s:'六中。你帮我看看这道题。'},
+{t:'say',n:'六中',s:'你又出题？给谁？'},
+{t:'say',n:'二中',s:'给省实。最后一站。'},
+{t:'scene',s:'六中接过去。'},
+
+/* ===== 试题 3 ===== */
+{t:'quiz',q:{
+  tag:'地理解密 · 第 3 题　白云东平站',
+  stem:'广州地铁白云东平站位于白云山东侧山脚，14号线在此设站。白云山山体主要由花岗岩构成，而广州地铁在市区西部施工时曾遭遇岩溶塌陷问题。\n\n从地质条件对地铁站选址与施工方式的影响角度，下列判断正确的是：',
+  options:[
+    'A. 白云东平站因花岗岩基岩强度高，可采用较浅埋深和明挖施工',
+    'B. 白云东平站靠近白云山，应以高架敷设为主，避免地下花岗岩开挖难度',
+    'C. 广州西部岩溶区的地铁站必须采用地下三层以上埋深，以穿越溶洞发育层',
+    'D. 花岗岩与岩溶地层对地铁施工的影响差异，主要取决于岩石成因类型而非强度'
+  ],
+  answer:3,
+  hint:'再想想。这道题考的不是"硬就好、软就坏"。花岗岩和石灰岩，它们的工程问题根本不是同一类。',
+  explain:'白云山山体主要由花岗岩构成，属岩浆岩，工程问题集中在开挖难度与岩体强度；广州西部岩溶区为石灰岩溶蚀地层，工程问题集中在溶洞发育与地下水。两者对地铁施工的约束方式不同，取决于岩石的成因类型及其工程地质特性，而非单一的"强度"标准。A项错误：白云东平站位于白云大道北下方，路面交通繁忙，且花岗岩强度高反而增加暗挖难度，不必然采用较浅埋深和明挖；B项错误：高架敷设受线位与坡度限制，白云山脚地面条件亦不适用；C项"必须"过于绝对，岩溶区可通过注浆加固等措施处理，不必然采用三层以上埋深。'
+}},
+
+{t:'say',n:'六中',s:'（看完，沉默了一会儿）这题比前两道都难。'},
+{t:'say',n:'二中',s:'嗯。答案不是一眼能看出来的。'},
+{t:'say',n:'六中',s:'A的后半句有问题。花岗岩强度高，但明挖还是暗挖还要看地面条件。白云东平站在白云大道北底下，路面交通不能断，明挖不现实。B更不对，高架敷设在白云山脚那个位置，线位和坡度都绕不过去。C太绝对，"必须"这个词在高考题里通常就是错的，岩溶区也可以注浆加固，不是非得埋三层。D……D说的是成因类型和强度的区别，花岗岩是岩浆岩，岩溶是石灰岩溶蚀，成因不同，对工程的约束方式也不同。选D？'},
+{t:'say',n:'二中',s:'（把纸拿回来折好）D。'},
+{t:'say',n:'六中',s:'你出这道题的时候就知道答案是D。'},
+{t:'say',n:'二中',s:'嗯。但省实不一定答得出来。D绕了一个弯，把"花岗岩硬"和"岩溶塌"两个直觉印象都推翻了。它考的是——地质条件对地铁的影响不是"硬就好、软就坏"，而是不同的成因类型带来不同的问题。花岗岩的问题在开挖难度，岩溶的问题在溶洞和塌陷。两者不能用一个"强度"标准去比。'},
+{t:'say',n:'六中',s:'（看着二中）你给省实出这道题，是想让他答不出来？'},
+{t:'say',n:'二中',s:'我想让他来找我。答不出来，他就得来找我。答得出来，他更得来——因为我会告诉他，D不对。'},
+{t:'say',n:'六中',s:'那D到底对不对。'},
+{t:'say',n:'二中',s:'对。但省实不会信。他会觉得"必须"和"主要"这种词在高考题里太绝对，然后选一个看起来更稳妥的。他选错，就会回来找我争。'},
+{t:'say',n:'六中',s:'（笑了一声）二中。你这个人，喜欢一个人喜欢得真费劲。'},
+{t:'say',n:'二中',s:'（把纸塞进口袋，弯腰提起奶茶袋）费劲也得费。走吧。去省实东平校区门口等他。他今天下午有课。'},
+{t:'scene',s:'两个人往白云东平站A口方向走。地铁站的导向牌在头顶展开，14号线往嘉禾望岗的箭头，18号线北延段施工围挡上的"广州东至花都天贵城际"字样，还有白云大道北的车流声混在一起。六中走在二中旁边，手里的奶茶袋晃了晃。'},
+{t:'say',n:'六中',s:'二中。'},
+{t:'say',n:'二中',s:'嗯。'},
+{t:'say',n:'六中',s:'你刚才在嘉禾望岗，为什么不上车。'},
+{t:'say',n:'二中',s:'（走了两步）因为那趟车是往广州南站的。我要等的不是南站。'},
+{t:'say',n:'六中',s:'那你等什么。'},
+{t:'say',n:'二中',s:'（偏过头看了六中一眼）等下一趟。下一趟如果是往机场北的，我就上。'},
+{t:'say',n:'六中',s:'（愣住）机场北？'},
+{t:'say',n:'二中',s:'省实往机场北走了。华附跟他一起。我追不上那趟车了。（停了一下）但下一趟可以。'},
+{t:'say',n:'六中',s:'（把奶茶袋换了一只手提）那我呢。我上哪趟。'},
+{t:'say',n:'二中',s:'你不是已经在车上了吗。'},
+{t:'say',n:'六中',s:'……什么车。'},
+{t:'say',n:'二中',s:'你从苏元跟到体育西路，从体育西路跟到嘉禾望岗，现在跟到白云东平。（看了一眼六中手里的奶茶）四杯。你连华附的都买了。你上的是哪趟车，你自己不知道？'},
+{t:'scene',s:'六中没说话。两个人走进白云东平站C口，扶梯往下，地铁站的冷气扑上来。14号线的站厅层灯光明晃晃的，导向牌上"嘉禾望岗"四个字指向站台方向。二中忽然停下来，回头看了一眼六中。'},
+{t:'say',n:'二中',s:'六中。白云东平这道题，你帮我改一下选项。'},
+{t:'say',n:'六中',s:'怎么改。'},
+{t:'say',n:'二中',s:'把D改成"花岗岩地区地铁施工以控制开挖强度为主，岩溶地区以控制溶蚀空洞和地下水为主，两者工程约束不同"。然后把"主要取决于成因类型而非强度"放到题干里，不要放在选项里。让省实去选"成因类型"还是"岩石强度"。'},
+{t:'say',n:'六中',s:'（想了想）那你就是让他必须理解花岗岩和石灰岩的工程问题不是同一个逻辑。'},
+{t:'say',n:'二中',s:'对。他理解了，就会来找我。他不理解，也会来找我。'},
+{t:'say',n:'六中',s:'（叹气）二中。你出题比谈恋爱认真多了。'},
+{t:'say',n:'二中',s:'（往站台走）谈恋爱我也认真。只是省实看不见。'},
+{t:'scene',s:'14号线往嘉禾望岗方向的列车进站。二中站在黄线后面，奶茶袋放在脚边。六中站在他旁边半步远的地方，没有靠得更近，也没有退得更远。车门打开，二中走上去，找了个靠边的位置站好。六中跟上去，站在他旁边，奶茶袋挂在扶手上。'},
+{t:'scene',s:'列车启动，白云东平站台往后退。二中掏出手机，给省实发了最后一条消息，附上那道改过选项的白云东平题。'},
+{t:'say',n:'二中',msg:true,s:'最后一道。答对了我在省实东平校区门口等你。答错了我也在。'},
+{t:'scene',s:'省实秒回："华附说这题选D。但你改了选项。D现在是错的。正确答案呢？"'},
+{t:'say',n:'二中',msg:true,s:'你来了我告诉你。'},
+{t:'say',n:'省实',msg:true,s:'二中你有病。'},
+{t:'say',n:'二中',msg:true,s:'嗯。你惯的。'},
+{t:'scene',s:'六中偏头看了一眼二中的手机屏幕，又收回视线，看着对面车窗里自己的倒影。'},
+{t:'say',n:'六中',s:'（很小声）二中。你给省实出的题，有没有一道是给我出的。'},
+{t:'say',n:'二中',s:'（把手机收起来，偏头看六中）有。白云东平这道。你答对了。'},
+{t:'say',n:'六中',s:'……我答对的是改之前的D。'},
+{t:'say',n:'二中',s:'改之后你也答对了。'},
+{t:'say',n:'六中',s:'你还没说改之后的正确答案。'},
+{t:'say',n:'二中',s:'（看着车窗外面飞速后退的白云山轮廓）改之后的正确答案是，花岗岩和岩溶不是一回事，但它们在一条地铁线上可以同时出现。就像喜欢一个人和喜欢另一个人，不是互相抵消的。'},
+{t:'scene',s:'六中沉默了很久。14号线列车穿过白云区的地下，报站广播响起："下一站，嘉禾望岗。"'},
+{t:'say',n:'六中',s:'二中。你这句话是说给省实听的，还是说给我听的。'},
+{t:'say',n:'二中',s:'说给车上所有人听的。（偏过头看了六中一眼）你听见了，就算你的。'}
+
+];
+
+/* ==================== 运行逻辑 ==================== */
+const content = document.getElementById('content');
+const reader = document.getElementById('reader');
+const cover = document.getElementById('cover');
+const progressFill = document.getElementById('progressFill');
+const hint = document.getElementById('hint');
+const quizMask = document.getElementById('quizMask');
+const quizCard = quizMask.querySelector('.quiz-card');
+
+let idx = 0;
+let typing = false;     // 当前是否正在打字
+let skipTyping = false; // 是否要跳过打字
+let quizOpen = false;
+let finished = false;
+
+/* ---------- 进度条 ---------- */
+function updateProgress(){
+  const p = Math.min(100, (idx / STORY.length) * 100);
+  progressFill.style.width = p + '%';
+}
+
+/* ---------- 渲染一行 ---------- */
+  function renderLine(item) {
+    const el = document.createElement('div');
+    let target; // 要打字的元素
+
+    if (item.t === 'scene') {
+      el.className = 'line scene';
+      el.textContent = item.s;
+      target = el;
+    } else {
+      el.className = 'line say' + (item.msg ? ' msg' : '');
+      const who = document.createElement('span');
+      who.className = 'who';
+      who.style.color = C[item.n] || '#dfe4ee';
+      who.textContent = item.n;
+      const colon = document.createElement('span');
+      colon.className = 'colon';
+      colon.textContent = '：';
+      const txt = document.createElement('span');
+      txt.className = 'txt';
+      txt.textContent = item.s;
+      el.append(who, colon, txt);
+      target = txt;
+    }
+
+    content.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+
+    // ===== 打字机 =====
+    const full = target.textContent;
+    target.textContent = '';
+    typing = true;
+    skipTyping = false;
+    let i = 0;
+    let tick = 0;
+    const SPEED = 22; // 每字间隔毫秒，越小越快
+
+    function step() {
+      if (skipTyping) {              // 被点击跳过
+        target.textContent = full;
+        typing = false;
+        content.scrollTo({top: content.scrollHeight, behavior: 'smooth'});
+        return;
+      }
+      if (i >= full.length) {        // 打完了
+        typing = false;
+        content.scrollTo({top: content.scrollHeight, behavior: 'smooth'});
+        return;
+      }
+      target.textContent += full[i++];
+      if (++tick % 3 === 0) {        // 每3个字滚一次，避免卡顿
+        content.scrollTop = content.scrollHeight;
+      }
+      setTimeout(step, SPEED);
+    }
+    step();
+  }
+
+/* ---------- 结束 ---------- */
+function finish(){
+  if(finished) return;
+  finished = true;
+  const el = document.createElement('div');
+  el.className = 'end-mark';
+  el.innerHTML = '<div class="end-line"></div><div>第 一 章 · 完</div>' +
+                 '<div class="end-tip">下一章：嘉禾望岗 · 广雅出场</div>';
+  content.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => content.scrollTo({top: content.scrollHeight, behavior:'smooth'}), 60);
+  hint.style.display = 'none';
+}
+
+/* ---------- 推进 ---------- */
+function advance(){
+  if(quizOpen || finished) return;
+  if (typing) {skipTyping = true; return;}
+
+  if(idx >= STORY.length){ finish(); return; }
+
+  const item = STORY[idx++];
+  updateProgress();
+
+  if(item.t === 'quiz'){
+    openQuiz(item.q);
+    return;
+  }
+
+  renderLine(item);
+
+  if(idx >= STORY.length) finish();
+}
+
+/* ---------- 试题弹窗 ---------- */
+function openQuiz(q){
+  quizOpen = true;
+  quizCard.innerHTML = '';
+  quizCard.scrollTop = 0;
+
+  const tag = document.createElement('div');
+  tag.className = 'q-tag';
+  tag.textContent = q.tag;
+
+  const stem = document.createElement('div');
+  stem.className = 'q-stem';
+  stem.textContent = q.stem;
+
+  const opts = document.createElement('div');
+  opts.className = 'q-opts';
+
+  const feedback = document.createElement('div');
+  feedback.className = 'q-feedback';
+
+  const submitBtn = document.createElement('button');
+  submitBtn.className = 'q-submit';
+  submitBtn.textContent = '提交答案';
+  submitBtn.disabled = true;
+
+  let selected = -1;
+  let solved = false;
+  const btns = [];
+
+  q.options.forEach((optText, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.type = 'button';
+    b.textContent = optText;
+
+    b.addEventListener('click', () => {
+      if(solved) return;
+      selected = i;
+      btns.forEach((x, j) => {
+        x.classList.toggle('sel', j === i);
+        x.classList.remove('wrong');
+      });
+      feedback.classList.remove('show');
+      submitBtn.disabled = false;
+    });
+
+    btns.push(b);
+    opts.appendChild(b);
+  });
+
+  submitBtn.addEventListener('click', () => {
+    if(solved){ closeQuiz(); return; }
+    if(selected === -1) return;
+
+    if(selected === q.answer){
+      solved = true;
+      btns[selected].classList.remove('sel');
+      btns[selected].classList.add('right');
+      feedback.innerHTML = '<strong class="ok">✓ 回答正确</strong><br>' + q.explain;
+      feedback.classList.add('show');
+      submitBtn.textContent = '继续阅读';
+      submitBtn.disabled = false;
+      setTimeout(() => quizCard.scrollTo({top: quizCard.scrollHeight, behavior:'smooth'}), 60);
+    } else {
+      btns[selected].classList.remove('sel');
+      btns[selected].classList.add('wrong');
+      feedback.innerHTML = '<strong class="bad">✗ 再想想</strong><br>' + q.hint;
+      feedback.classList.add('show');
+      selected = -1;
+      submitBtn.disabled = true;
+      setTimeout(() => quizCard.scrollTo({top: quizCard.scrollHeight, behavior:'smooth'}), 60);
+    }
+  });
+
+  quizCard.append(tag, stem, opts, feedback, submitBtn);
+  quizMask.classList.add('on');
+}
+
+function closeQuiz(){
+  quizOpen = false;
+  quizMask.classList.remove('on');
+  setTimeout(() => {
+    if(!quizOpen) advance();
+  }, 280);
+}
+
+/* ---------- 事件绑定 ---------- */
+document.getElementById('startBtn').addEventListener('click', () => {
+  cover.classList.add('hidden');
+  reader.classList.remove('hidden');
+  updateProgress();
+  setTimeout(advance, 220);
+});
+
+reader.addEventListener('click', (e) => {
+  if(quizOpen || finished) return;
+  if(e.target.closest('#quizMask')) return;
+  advance();
+});
+
+quizMask.addEventListener('click', (e) => {
+  // 点击遮罩空白不关闭，防误触
+  e.stopPropagation();
+});
+</script>
+</body>
+</html>
